@@ -1,0 +1,297 @@
+{
+  "generatedAt": "2026-08-09T14:18:44.320Z",
+  "hospitals": [
+    {
+      "id": "H001",
+      "name": "さくら総合病院"
+    },
+    {
+      "id": "H002",
+      "name": "みなと大学医学部附属病院"
+    },
+    {
+      "id": "H003",
+      "name": "青葉記念クリニック"
+    }
+  ],
+  "trials": [
+    {
+      "id": "T001",
+      "name": "ABC-201試験"
+    },
+    {
+      "id": "T002",
+      "name": "XYZ-305試験"
+    },
+    {
+      "id": "T003",
+      "name": "KLM-102試験"
+    }
+  ],
+  "documents": [
+    {
+      "path": "01_gcp/gcp-ordinance.md",
+      "layer": 1,
+      "hospitalId": null,
+      "trialId": null,
+      "title": "医薬品の臨床試験の実施の基準に関する省令（GCP省令）抜粋",
+      "docType": "gcp"
+    },
+    {
+      "path": "02_hospital/H001_さくら総合病院/hosp-sop.md",
+      "layer": 2,
+      "hospitalId": "H001",
+      "trialId": null,
+      "title": "さくら総合病院 治験実施に関する標準業務手順書（Hospital SOP）",
+      "docType": "hosp_sop"
+    },
+    {
+      "path": "02_hospital/H001_さくら総合病院/laboratory-sop.md",
+      "layer": 2,
+      "hospitalId": "H001",
+      "trialId": null,
+      "title": "さくら総合病院 臨床検査部 治験検体取扱手順書",
+      "docType": "laboratory_sop"
+    },
+    {
+      "path": "02_hospital/H001_さくら総合病院/nursing-sop.md",
+      "layer": 2,
+      "hospitalId": "H001",
+      "trialId": null,
+      "title": "さくら総合病院 看護部 治験実施支援手順書",
+      "docType": "nursing_sop"
+    },
+    {
+      "path": "02_hospital/H001_さくら総合病院/pharmacy-sop.md",
+      "layer": 2,
+      "hospitalId": "H001",
+      "trialId": null,
+      "title": "さくら総合病院 薬剤部 治験薬取扱手順書",
+      "docType": "pharmacy_sop"
+    },
+    {
+      "path": "02_hospital/H002_みなと大学医学部附属病院/hosp-sop.md",
+      "layer": 2,
+      "hospitalId": "H002",
+      "trialId": null,
+      "title": "みなと大学医学部附属病院 治験標準業務手順書（Hospital SOP）",
+      "docType": "hosp_sop"
+    },
+    {
+      "path": "02_hospital/H002_みなと大学医学部附属病院/laboratory-sop.md",
+      "layer": 2,
+      "hospitalId": "H002",
+      "trialId": null,
+      "title": "みなと大学医学部附属病院 検査部 治験検体取扱手順書",
+      "docType": "laboratory_sop"
+    },
+    {
+      "path": "02_hospital/H002_みなと大学医学部附属病院/nursing-sop.md",
+      "layer": 2,
+      "hospitalId": "H002",
+      "trialId": null,
+      "title": "みなと大学医学部附属病院 看護部 治験実施支援手順書",
+      "docType": "nursing_sop"
+    },
+    {
+      "path": "02_hospital/H002_みなと大学医学部附属病院/pharmacy-sop.md",
+      "layer": 2,
+      "hospitalId": "H002",
+      "trialId": null,
+      "title": "みなと大学医学部附属病院 薬剤部 治験薬管理手順書",
+      "docType": "pharmacy_sop"
+    },
+    {
+      "path": "02_hospital/H003_青葉記念クリニック/hosp-sop.md",
+      "layer": 2,
+      "hospitalId": "H003",
+      "trialId": null,
+      "title": "青葉記念クリニック 治験業務手順書",
+      "docType": "hosp_sop"
+    },
+    {
+      "path": "02_hospital/H003_青葉記念クリニック/nursing-sop.md",
+      "layer": 2,
+      "hospitalId": "H003",
+      "trialId": null,
+      "title": "青葉記念クリニック 看護業務手順（治験関連）",
+      "docType": "nursing_sop"
+    },
+    {
+      "path": "02_hospital/H003_青葉記念クリニック/pharmacy-sop.md",
+      "layer": 2,
+      "hospitalId": "H003",
+      "trialId": null,
+      "title": "青葉記念クリニック 治験薬取扱手順",
+      "docType": "pharmacy_sop"
+    },
+    {
+      "path": "03_trial/T001_ABC-201試験/drug-handling.md",
+      "layer": 3,
+      "hospitalId": null,
+      "trialId": "T001",
+      "title": "ABC-201試験 治験薬取扱説明書",
+      "docType": "drug_handling"
+    },
+    {
+      "path": "03_trial/T001_ABC-201試験/informed-consent.md",
+      "layer": 3,
+      "hospitalId": null,
+      "trialId": "T001",
+      "title": "ABC-201試験 同意説明文書",
+      "docType": "informed_consent"
+    },
+    {
+      "path": "03_trial/T001_ABC-201試験/investigators-brochure.md",
+      "layer": 3,
+      "hospitalId": null,
+      "trialId": "T001",
+      "title": "ABC-101 治験薬概要書",
+      "docType": "investigators_brochure"
+    },
+    {
+      "path": "03_trial/T001_ABC-201試験/lab-manual.md",
+      "layer": 3,
+      "hospitalId": null,
+      "trialId": "T001",
+      "title": "ABC-201試験 ラボマニュアル",
+      "docType": "lab_manual"
+    },
+    {
+      "path": "03_trial/T001_ABC-201試験/protocol.md",
+      "layer": 3,
+      "hospitalId": null,
+      "trialId": "T001",
+      "title": "ABC-201試験 治験実施計画書（プロトコル）",
+      "docType": "protocol"
+    },
+    {
+      "path": "03_trial/T002_XYZ-305試験/drug-handling.md",
+      "layer": 3,
+      "hospitalId": null,
+      "trialId": "T002",
+      "title": "XYZ-305試験 治験薬取扱説明書",
+      "docType": "drug_handling"
+    },
+    {
+      "path": "03_trial/T002_XYZ-305試験/informed-consent.md",
+      "layer": 3,
+      "hospitalId": null,
+      "trialId": "T002",
+      "title": "XYZ-305試験 同意説明文書",
+      "docType": "informed_consent"
+    },
+    {
+      "path": "03_trial/T002_XYZ-305試験/lab-manual.md",
+      "layer": 3,
+      "hospitalId": null,
+      "trialId": "T002",
+      "title": "XYZ-305試験 ラボマニュアル",
+      "docType": "lab_manual"
+    },
+    {
+      "path": "03_trial/T002_XYZ-305試験/protocol.md",
+      "layer": 3,
+      "hospitalId": null,
+      "trialId": "T002",
+      "title": "XYZ-305試験 治験実施計画書（プロトコル）",
+      "docType": "protocol"
+    },
+    {
+      "path": "03_trial/T003_KLM-102試験/informed-consent.md",
+      "layer": 3,
+      "hospitalId": null,
+      "trialId": "T003",
+      "title": "KLM-102試験 同意説明文書",
+      "docType": "informed_consent"
+    },
+    {
+      "path": "03_trial/T003_KLM-102試験/lab-manual.md",
+      "layer": 3,
+      "hospitalId": null,
+      "trialId": "T003",
+      "title": "KLM-102試験 ラボマニュアル",
+      "docType": "lab_manual"
+    },
+    {
+      "path": "03_trial/T003_KLM-102試験/protocol.md",
+      "layer": 3,
+      "hospitalId": null,
+      "trialId": "T003",
+      "title": "KLM-102試験 治験実施計画書（プロトコル）",
+      "docType": "protocol"
+    },
+    {
+      "path": "04_hospital_trial/H001__T001/note-to-file.md",
+      "layer": 4,
+      "hospitalId": "H001",
+      "trialId": "T001",
+      "title": "さくら総合病院 ABC-201試験 Note to File 集",
+      "docType": "note_to_file"
+    },
+    {
+      "path": "04_hospital_trial/H001__T001/pharmacist-meeting-minutes.md",
+      "layer": 4,
+      "hospitalId": "H001",
+      "trialId": "T001",
+      "title": "さくら総合病院 ABC-201試験 薬剤師ミーティング議事録",
+      "docType": "pharmacist_meeting_minutes"
+    },
+    {
+      "path": "04_hospital_trial/H001__T001/specific-sop.md",
+      "layer": 4,
+      "hospitalId": "H001",
+      "trialId": "T001",
+      "title": "さくら総合病院 ABC-201試験 実施手順書（Specific SOP）",
+      "docType": "specific_sop"
+    },
+    {
+      "path": "04_hospital_trial/H001__T002/note-to-file.md",
+      "layer": 4,
+      "hospitalId": "H001",
+      "trialId": "T002",
+      "title": "さくら総合病院 XYZ-305試験 Note to File 集",
+      "docType": "note_to_file"
+    },
+    {
+      "path": "04_hospital_trial/H001__T002/specific-sop.md",
+      "layer": 4,
+      "hospitalId": "H001",
+      "trialId": "T002",
+      "title": "さくら総合病院 XYZ-305試験 実施手順書（Specific SOP）",
+      "docType": "specific_sop"
+    },
+    {
+      "path": "04_hospital_trial/H002__T001/note-to-file.md",
+      "layer": 4,
+      "hospitalId": "H002",
+      "trialId": "T001",
+      "title": "みなと大学医学部附属病院 ABC-201試験 Note to File 集",
+      "docType": "note_to_file"
+    },
+    {
+      "path": "04_hospital_trial/H002__T001/specific-sop.md",
+      "layer": 4,
+      "hospitalId": "H002",
+      "trialId": "T001",
+      "title": "みなと大学医学部附属病院 ABC-201試験 実施手順書（Specific SOP）",
+      "docType": "specific_sop"
+    },
+    {
+      "path": "04_hospital_trial/H003__T003/pharmacist-meeting-minutes.md",
+      "layer": 4,
+      "hospitalId": "H003",
+      "trialId": "T003",
+      "title": "青葉記念クリニック KLM-102試験 薬剤師ミーティング議事録",
+      "docType": "pharmacist_meeting_minutes"
+    },
+    {
+      "path": "04_hospital_trial/H003__T003/specific-sop.md",
+      "layer": 4,
+      "hospitalId": "H003",
+      "trialId": "T003",
+      "title": "青葉記念クリニック KLM-102試験 実施手順書（Specific SOP）",
+      "docType": "specific_sop"
+    }
+  ]
+}

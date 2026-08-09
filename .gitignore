@@ -1,0 +1,31 @@
+# 環境変数（APIキーを含む。絶対にコミットしない）
+.env
+.env.local
+.env.*.local
+
+# 依存関係
+node_modules/
+
+# Next.js
+.next/
+out/
+build/
+
+# ログ
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# エディタ
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Claude Code の個人設定（プロジェクト共有分は .claude/settings.json）
+.claude/settings.local.json
+
+# TypeScript のビルド情報
+tsconfig.tsbuildinfo
