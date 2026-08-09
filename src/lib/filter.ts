@@ -4,6 +4,7 @@ import type { DocumentMeta, Layer } from "@/types";
  * 指定された病院・治験に関連する文書だけを抽出する。
  *
  * docs/design.md 「3.2 文書の絞り込みルール」:
+ *   ⓪ 常に含める（行動原則。規則ではない）
  *   ① 常に含める
  *   ② hospitalId が一致
  *   ③ trialId が一致
@@ -26,6 +27,7 @@ function isRelevant(
   trialId: string,
 ): boolean {
   switch (doc.layer) {
+    case 0:
     case 1:
       return true;
     case 2:
@@ -49,6 +51,7 @@ export function sortByLayer(documents: DocumentMeta[]): DocumentMeta[] {
 }
 
 export const LAYER_LABELS: Record<Layer, string> = {
+  0: "⓪ CRC行動原則（規則ではない。出典として引用しないこと）",
   1: "① GCP（国が定めた基準）",
   2: "② 病院文書（病院が制定）",
   3: "③ 治験文書（製薬会社が作成）",
@@ -56,6 +59,7 @@ export const LAYER_LABELS: Record<Layer, string> = {
 };
 
 export const LAYER_SHORT: Record<Layer, string> = {
+  0: "⓪ 行動原則",
   1: "① GCP",
   2: "② 病院",
   3: "③ 治験",

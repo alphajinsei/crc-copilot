@@ -1,7 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ANSWER_SCHEMA, SYSTEM_PROMPT, buildUserMessage } from "@/lib/prompt";
 import type { LoadedDocument } from "@/lib/registry";
-import type { Answer, Confidence, Hospital, Trial } from "@/types";
+import type {
+  Action,
+  Answer,
+  Confidence,
+  Hospital,
+  Stakeholder,
+  Trial,
+} from "@/types";
 
 export const DEFAULT_MODEL = "claude-sonnet-5";
 
@@ -15,19 +22,29 @@ export function isMockMode(): boolean {
 }
 
 /**
- * ストリーミングされるJSONから answer フィールドの値を逐次取り出す。
+ * ストリーミングされるJSONから、指定したキーの文字列値を逐次取り出す。
  *
  * 構造化出力を使うと本文はJSON文字列の一部として到着するため、そのまま
  * 画面に出すと `{"confidence":"gro...` のように見えてしまう。
- * answer の値部分だけを抜き出し、JSONエスケープを解いて返す。
+ * 目的のキーの値部分だけを抜き出し、JSONエスケープを解いて返す。
  *
  * 完成したJSONのパースは別途行うので、ここは「表示用の best effort」。
  */
-export class AnswerTextExtractor {
+export class JsonFieldExtractor {
   private buffer = "";
   private emitted = 0;
   private valueStart = -1;
   private done = false;
+  private readonly keyPattern: RegExp;
+
+  constructor(key: string) {
+    this.keyPattern = new RegExp(`"${key}"\\s*:\\s*"`);
+  }
+
+  /** 値の取り出しが完了したか。 */
+  get finished(): boolean {
+    return this.done;
+  }
 
   /** 受け取った差分のうち、新たに表示すべきテキストを返す。 */
   push(delta: string): string {
@@ -35,8 +52,8 @@ export class AnswerTextExtractor {
     this.buffer += delta;
 
     if (this.valueStart === -1) {
-      // "answer" キーの値の開始位置（開き引用符の次）を探す
-      const match = /"answer"\s*:\s*"/.exec(this.buffer);
+      // 目的のキーの値の開始位置（開き引用符の次）を探す
+      const match = this.keyPattern.exec(this.buffer);
       if (!match) return "";
       this.valueStart = match.index + match[0].length;
       this.emitted = this.valueStart;
@@ -74,6 +91,55 @@ export class AnswerTextExtractor {
     if (end !== -1) this.done = true;
 
     return unescapeJsonString(chunk);
+  }
+}
+
+/**
+ * 回答全体のストリーミング表示を組み立てる。
+ *
+ * 構造化出力では situation → answer → actions の順にJSONが生成されるため、
+ * answer だけを追うと、actions の生成中（出力の半分以上を占める）は
+ * 画面が止まって見える。実測で本文499字に対し総出力1,600字だった。
+ *
+ * そこで表示用テキストを段階的に組み立て、
+ * actions の生成中も進捗が見えるようにする。
+ */
+export class AnswerStreamFormatter {
+  private readonly situation = new JsonFieldExtractor("situation");
+  private readonly answer = new JsonFieldExtractor("answer");
+  private situationEmitted = false;
+  private answerHeaderEmitted = false;
+  private actionsNoticeEmitted = false;
+
+  /** 受け取った差分に対応する、表示用テキストの追加分を返す。 */
+  push(delta: string): string {
+    let out = "";
+
+    const situationText = this.situation.push(delta);
+    if (situationText) {
+      if (!this.situationEmitted) {
+        this.situationEmitted = true;
+        out += "【状況の理解】\n";
+      }
+      out += situationText;
+    }
+
+    const answerText = this.answer.push(delta);
+    if (answerText) {
+      if (!this.answerHeaderEmitted) {
+        this.answerHeaderEmitted = true;
+        out += this.situationEmitted ? "\n\n【資料に基づく事実】\n" : "";
+      }
+      out += answerText;
+    }
+
+    // answer が終わった後は actions の生成中。ここが最も長い。
+    if (this.answer.finished && !this.actionsNoticeEmitted) {
+      this.actionsNoticeEmitted = true;
+      out += "\n\n推奨アクションを作成しています…";
+    }
+
+    return out;
   }
 }
 
@@ -138,6 +204,18 @@ function isConfidence(value: unknown): value is Confidence {
   return value === "grounded" || value === "ambiguous" || value === "no_evidence";
 }
 
+const STAKEHOLDERS: readonly Stakeholder[] = [
+  "doctor",
+  "supervisor",
+  "patient",
+  "sponsor",
+  "internal",
+];
+
+function isStakeholder(value: unknown): value is Stakeholder {
+  return STAKEHOLDERS.includes(value as Stakeholder);
+}
+
 /** LLMの出力をAnswer型に変換する。想定外の形は握りつぶさずエラーにする。 */
 export function parseAnswer(raw: string): Answer {
   let parsed: unknown;
@@ -173,13 +251,49 @@ export function parseAnswer(raw: string): Answer {
       })
     : [];
 
+  const actions = Array.isArray(obj.actions)
+    ? obj.actions
+        .flatMap((item) => {
+          if (typeof item !== "object" || item === null) return [];
+          const a = item as Record<string, unknown>;
+          if (!isStakeholder(a.stakeholder)) return [];
+
+          const timing = typeof a.timing === "string" ? a.timing.trim() : "";
+          const groundedIn = Array.isArray(a.groundedIn)
+            ? a.groundedIn.map(String).filter((p) => p.length > 0)
+            : [];
+
+          return [
+            {
+              order: typeof a.order === "number" ? a.order : 0,
+              stakeholder: a.stakeholder,
+              action: String(a.action ?? ""),
+              why: String(a.why ?? ""),
+              ...(timing ? { timing } : {}),
+              ...(groundedIn.length > 0 ? { groundedIn } : {}),
+            } satisfies Action,
+          ];
+        })
+        // LLMが order を飛ばしたり重複させたりしても、表示順は安定させる
+        .sort((a, b) => a.order - b.order)
+    : [];
+
+  const openQuestions = Array.isArray(obj.openQuestions)
+    ? obj.openQuestions.map(String).filter((q) => q.trim().length > 0)
+    : [];
+
   const caveat = typeof obj.caveat === "string" ? obj.caveat.trim() : "";
+  const situation =
+    typeof obj.situation === "string" ? obj.situation.trim() : "";
 
   return {
     confidence: obj.confidence,
     answer: obj.answer,
     ...(caveat ? { caveat } : {}),
     citations,
+    ...(situation ? { situation } : {}),
+    actions,
+    ...(openQuestions.length > 0 ? { openQuestions } : {}),
   };
 }
 
@@ -210,7 +324,7 @@ export async function askClaude(
   signal?: AbortSignal,
 ): Promise<Answer> {
   const userMessage = buildUserMessage(hospital, trial, documents, question);
-  const extractor = new AnswerTextExtractor();
+  const formatter = new AnswerStreamFormatter();
 
   const stream = getClient().messages.stream(
     {
@@ -248,7 +362,7 @@ export async function askClaude(
   );
 
   stream.on("text", (delta) => {
-    const visible = extractor.push(delta);
+    const visible = formatter.push(delta);
     if (visible) callbacks.onAnswerDelta(visible);
   });
 
@@ -317,5 +431,44 @@ export async function askMock(
           },
         ]
       : [],
+    situation:
+      "（モック）UIの表示確認用の固定応答です。実際の状況を解析したものではありません。",
+    // アクション表示のUIを確認できるよう、各ステークホルダーを1件ずつ含める
+    actions: [
+      {
+        order: 1,
+        stakeholder: "doctor",
+        action:
+          "（モック）治験責任医師に状況を報告し、医学的判断を仰ぐ",
+        why: "医学的判断の権限は医師にあり、判断が出ないと他の関係者に伝える内容が確定しないため",
+        timing: "速やかに",
+        groundedIn: [],
+      },
+      {
+        order: 2,
+        stakeholder: "supervisor",
+        action: "（モック）CRCリーダーに一報を入れる",
+        why: "組織として対応の要否を判断できるようにするため",
+        groundedIn: [],
+      },
+      {
+        order: 3,
+        stakeholder: "patient",
+        action: "（モック）医師の判断を踏まえて被験者に連絡する",
+        why: "医師の判断が出る前に説明すると、後で覆って混乱を招くため",
+        timing: "医師の判断確定後",
+        groundedIn: [],
+      },
+      {
+        order: 4,
+        stakeholder: "internal",
+        action: "（モック）経過を記録し、必要に応じてNote to Fileを作成する",
+        why: "記録は即時に行い、記憶に頼らないため",
+        groundedIn: [],
+      },
+    ],
+    openQuestions: [
+      "（モック）これはUI確認用の固定応答です。ANTHROPIC_API_KEY を設定してください。",
+    ],
   };
 }

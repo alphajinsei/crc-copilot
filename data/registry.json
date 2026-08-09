@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-09T14:18:44.320Z",
+  "generatedAt": "2026-08-09T16:27:55.009Z",
   "hospitals": [
     {
       "id": "H001",
@@ -29,6 +29,22 @@
     }
   ],
   "documents": [
+    {
+      "path": "00_policy/crc-principles.md",
+      "layer": 0,
+      "hospitalId": null,
+      "trialId": null,
+      "title": "CRC行動原則",
+      "docType": "crc_principles"
+    },
+    {
+      "path": "00_policy/stakeholder-map.md",
+      "layer": 0,
+      "hospitalId": null,
+      "trialId": null,
+      "title": "ステークホルダー対応指針",
+      "docType": "stakeholder_map"
+    },
     {
       "path": "01_gcp/gcp-ordinance.md",
       "layer": 1,

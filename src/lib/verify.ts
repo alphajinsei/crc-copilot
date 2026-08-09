@@ -50,8 +50,14 @@ export function verifyAnswer(
 
   const citations: VerifiedCitation[] = answer.citations.map((citation) => {
     const doc = byPath.get(citation.documentPath);
-    const normalizedContent = getNormalizedContent(citation.documentPath);
-    const match = classify(citation.quote, normalizedContent);
+
+    // ⓪行動原則は「どう振る舞うべきか」を定めたものであり、規則ではない。
+    // これを出典として示すと、アプリの提案が規則に見えてしまう。
+    // 引用文が実在するかにかかわらず、出典としては不可とする。
+    const match =
+      doc?.layer === 0
+        ? "policy"
+        : classify(citation.quote, getNormalizedContent(citation.documentPath));
 
     return {
       ...citation,

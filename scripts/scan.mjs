@@ -2,6 +2,7 @@
  * data/ 配下のフォルダ構造をスキャンして data/registry.json を生成する。
  *
  * 命名規約（docs/design.md 4.3 を参照）
+ *   00_policy/                       → 層⓪（行動原則。規則ではない）
  *   01_gcp/                          → 層①
  *   02_hospital/{病院ID}_{表示名}/     → 層②
  *   03_trial/{治験ID}_{表示名}/        → 層③
@@ -23,6 +24,8 @@ const TRIAL_ID = /^T\d{3}$/;
 
 /** ファイル名から文書種別を推定する。registry の docType になる。 */
 const DOC_TYPES = {
+  "crc-principles": "crc_principles",
+  "stakeholder-map": "stakeholder_map",
   "gcp-ordinance": "gcp",
   "hosp-sop": "hosp_sop",
   "pharmacy-sop": "pharmacy_sop",
@@ -97,11 +100,17 @@ async function buildDocument(absPath, fileName, layer, hospitalId, trialId) {
   };
 }
 
-async function scanLayer1(documents) {
-  const dir = join(DATA_DIR, "01_gcp");
-  for (const file of await markdownFiles(dir)) {
+/** 層⓪と層①はいずれも病院・治験に依存せず、常に参照される。 */
+async function scanFlatLayer(documents, folder, layer) {
+  const dir = join(DATA_DIR, folder);
+  const files = await markdownFiles(dir);
+  if (files.length === 0) {
+    errors.push(`${folder}/: 文書が1件もありません`);
+    return;
+  }
+  for (const file of files) {
     documents.push(
-      await buildDocument(join(dir, file), file, 1, null, null),
+      await buildDocument(join(dir, file), file, layer, null, null),
     );
   }
 }
@@ -197,7 +206,8 @@ async function main() {
   const hospitals = new Map();
   const trials = new Map();
 
-  await scanLayer1(documents);
+  await scanFlatLayer(documents, "00_policy", 0);
+  await scanFlatLayer(documents, "01_gcp", 1);
   await scanLayer2(documents, hospitals);
   await scanLayer3(documents, trials);
   await scanLayer4(documents, hospitals, trials);
@@ -234,7 +244,7 @@ async function main() {
   console.log(`  治験: ${registry.trials.length}件`);
   console.log(
     `  文書: ${documents.length}件` +
-      ` (①${byLayer[1] ?? 0} / ②${byLayer[2] ?? 0} / ③${byLayer[3] ?? 0} / ④${byLayer[4] ?? 0})`,
+      ` (⓪${byLayer[0] ?? 0} / ①${byLayer[1] ?? 0} / ②${byLayer[2] ?? 0} / ③${byLayer[3] ?? 0} / ④${byLayer[4] ?? 0})`,
   );
 }
 

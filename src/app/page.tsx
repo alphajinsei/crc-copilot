@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { LAYER_SHORT } from "@/lib/filter";
 import type {
+  Action,
   AskStreamEvent,
   Confidence,
   Hospital,
   Layer,
   ReferencedDocument,
+  Stakeholder,
   Trial,
   VerifiedAnswer,
   VerifiedCitation,
@@ -44,10 +46,37 @@ const CONFIDENCE_STYLE: Record<
 };
 
 const LAYER_BADGE: Record<Layer, string> = {
+  0: "bg-stone-100 text-stone-700 ring-stone-500/20",
   1: "bg-slate-100 text-slate-700 ring-slate-500/20",
   2: "bg-sky-50 text-sky-800 ring-sky-600/20",
   3: "bg-violet-50 text-violet-800 ring-violet-600/20",
   4: "bg-teal-50 text-teal-800 ring-teal-600/20",
+};
+
+const STAKEHOLDER_STYLE: Record<
+  Stakeholder,
+  { label: string; className: string }
+> = {
+  doctor: {
+    label: "医師",
+    className: "bg-rose-50 text-rose-800 ring-rose-600/20",
+  },
+  supervisor: {
+    label: "上司",
+    className: "bg-amber-50 text-amber-900 ring-amber-600/25",
+  },
+  patient: {
+    label: "被験者",
+    className: "bg-emerald-50 text-emerald-800 ring-emerald-600/20",
+  },
+  sponsor: {
+    label: "治験依頼者",
+    className: "bg-indigo-50 text-indigo-800 ring-indigo-600/20",
+  },
+  internal: {
+    label: "院内対応",
+    className: "bg-slate-100 text-slate-700 ring-slate-500/20",
+  },
 };
 
 export default function Page() {
@@ -177,10 +206,14 @@ export default function Page() {
     setRunning(false);
   }
 
-  // 原文に存在しない引用（捏造の疑い）と、離れた箇所の連結は区別して数える
+  // 原文に存在しない引用（捏造の疑い）と、離れた箇所の連結は区別して数える。
+  // policy（⓪を出典にした）も、規則ではないものを根拠に見せる誤りなので同列に扱う。
   const notFoundCount =
     answer?.citations.filter(
-      (c) => c.match === "not_found" || c.match === "no_document",
+      (c) =>
+        c.match === "not_found" ||
+        c.match === "no_document" ||
+        c.match === "policy",
     ).length ?? 0;
   const stitchedCount =
     answer?.citations.filter((c) => c.match === "stitched").length ?? 0;
@@ -289,9 +322,20 @@ export default function Page() {
 
       {documents && <DocumentList documents={documents} />}
 
+      {answer?.situation && (
+        <section className="mt-8">
+          <h2 className="text-sm font-semibold text-slate-800">状況の理解</h2>
+          <p className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm whitespace-pre-wrap text-slate-700 shadow-sm">
+            {answer.situation}
+          </p>
+        </section>
+      )}
+
       {(streamedText || answer) && (
         <section className="mt-8">
-          <h2 className="text-sm font-semibold text-slate-800">回答</h2>
+          <h2 className="text-sm font-semibold text-slate-800">
+            資料に基づく事実
+          </h2>
 
           {answer && (
             <div
@@ -361,7 +405,103 @@ export default function Page() {
             根拠ありとされていますが、出典が示されていません。この回答は信頼できません。
           </p>
         )}
+
+      {answer && answer.actions.length > 0 && (
+        <section className="mt-10">
+          {/* 事実と提案の境界。ここから先はアプリの判断であることを視覚的に分離する */}
+          <div className="border-t-4 border-double border-slate-300 pt-6">
+            <h2 className="text-sm font-semibold text-slate-800">
+              推奨アクション
+            </h2>
+            <p className="mt-2 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-400/30">
+              <strong>これはアプリによる提案です。</strong>
+              上記「資料に基づく事実」とは異なり、資料に明記された手順とは限りません。
+              最終的な判断はCRCご自身で行ってください。
+            </p>
+
+            <ol className="mt-3 space-y-3">
+              {answer.actions.map((action, index) => (
+                <ActionCard key={index} action={action} step={index + 1} />
+              ))}
+            </ol>
+          </div>
+        </section>
+      )}
+
+      {answer && answer.openQuestions && answer.openQuestions.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-sm font-semibold text-slate-800">
+            確認が必要な事項
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">
+            以下が分かると、より具体的な助言ができます。
+          </p>
+          <ul className="mt-2 space-y-1.5 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+            {answer.openQuestions.map((question, index) => (
+              <li
+                key={index}
+                className="flex gap-2 text-sm text-slate-800"
+              >
+                <span aria-hidden className="text-slate-400">
+                  ?
+                </span>
+                <span>{question}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </main>
+  );
+}
+
+function ActionCard({ action, step }: { action: Action; step: number }) {
+  const style = STAKEHOLDER_STYLE[action.stakeholder];
+
+  return (
+    <li className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
+          {step}
+        </span>
+        <span
+          className={`rounded px-2 py-0.5 text-xs font-medium ring-1 ${style.className}`}
+        >
+          {style.label}
+        </span>
+        {action.timing && (
+          <span className="text-xs font-medium text-slate-600">
+            {action.timing}
+          </span>
+        )}
+        {action.groundedIn && action.groundedIn.length > 0 && (
+          <span className="ml-auto text-xs font-medium text-emerald-700">
+            資料に定めあり
+          </span>
+        )}
+      </div>
+
+      <p className="px-3 py-2 text-sm whitespace-pre-wrap text-slate-900">
+        {action.action}
+      </p>
+
+      {action.why && (
+        <p className="border-t border-slate-100 bg-slate-50/50 px-3 py-2 text-xs text-slate-600">
+          <span className="font-medium text-slate-700">理由：</span>
+          {action.why}
+        </p>
+      )}
+
+      {action.groundedIn && action.groundedIn.length > 0 && (
+        <ul className="border-t border-slate-100 px-3 py-2">
+          {action.groundedIn.map((path) => (
+            <li key={path} className="truncate text-xs text-slate-500">
+              {path}
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
   );
 }
 
@@ -466,6 +606,13 @@ const MATCH_STYLE: Record<
     labelClass: "text-rose-700",
     warning:
       "参照対象に含まれない文書が出典として示されています。この引用は信頼できません。",
+    warnClass: "border-rose-200 bg-rose-50 text-rose-900",
+  },
+  policy: {
+    label: "行動原則（規則ではない）",
+    labelClass: "text-rose-700",
+    warning:
+      "CRC行動原則が出典として示されています。行動原則はアプリの判断指針であり、規則ではありません。この記述を根拠として扱わないでください。",
     warnClass: "border-rose-200 bg-rose-50 text-rose-900",
   },
 };
