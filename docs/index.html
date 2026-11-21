@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="治験コーディネーター（CRC）向け業務相談アプリの試作を、要件の文章とAIとの会話からどう作ったかの記録。">
+<title>CRC相談役アプリの作り方</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@700;900&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; the page itself mirrors the app's idea — "facts" in blue, "suggestions" in ochre, human vs AI turns told apart by side and tone. */
+:root{
+  --paper:#f5f8f6; --surface:#ffffff; --sunk:#eaf0ed; --ink:#16302c; --muted:#5a6e69; --line:#d3dedb;
+  --fact:#285a8a; --fact-soft:#e4edf6; --suggest:#9a5c14; --suggest-soft:#f6ecdf; --human:#1f4a43; --human-soft:#e2eeea;
+  --display:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --body:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#111816; --surface:#18211f; --sunk:#1e2926; --ink:#e2ebe8; --muted:#98aba6; --line:#2c3a37;
+  --fact:#86b4e4; --fact-soft:#1b2a38; --suggest:#e2a65e; --suggest-soft:#2e2418; --human:#9fd3c6; --human-soft:#1d2f2b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#111816; --surface:#18211f; --sunk:#1e2926; --ink:#e2ebe8; --muted:#98aba6; --line:#2c3a37;
+  --fact:#86b4e4; --fact-soft:#1b2a38; --suggest:#e2a65e; --suggest-soft:#2e2418; --human:#9fd3c6; --human-soft:#1d2f2b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.85;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 4rem}
+.wrap{max-width:780px;margin:0 auto}
+a{color:var(--fact)}
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--fact);outline-offset:2px;border-radius:4px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.4;margin:0}
+h2{font-size:1.55rem;font-weight:900}
+h3{font-size:1.1rem}
+p{margin:0}
+section{display:flex;flex-direction:column;gap:1.1rem;padding-block:3rem 0}
+.eyebrow{font-family:var(--mono);font-size:.78rem;letter-spacing:.08em;color:var(--muted)}
+code,.mono{font-family:var(--mono);font-size:.88em}
+
+/* hero */
+.hero{padding-block:3.5rem 1rem;display:flex;flex-direction:column;gap:1.2rem;border-bottom:1px solid var(--line)}
+.hero h1{font-size:clamp(2rem,6vw,2.9rem);font-weight:900;letter-spacing:.01em}
+.hero .lead{font-size:1.08rem;max-width:40em}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:.6rem}
+.facts div{background:var(--surface);padding:.9rem 1rem;display:flex;flex-direction:column;gap:.2rem;min-width:0}
+.facts dt{font-size:.8rem;color:var(--muted)}
+.facts dd{margin:0;font-weight:700;font-size:.98rem;line-height:1.5}
+@media (max-width:640px){.facts{grid-template-columns:1fr}}
+
+/* two-part answer */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
+@media (max-width:640px){.split{grid-template-columns:1fr}}
+.part{border-radius:10px;padding:1rem 1.1rem;display:flex;flex-direction:column;gap:.5rem;min-width:0}
+.part.fact{background:var(--fact-soft);border-top:4px solid var(--fact)}
+.part.sugg{background:var(--suggest-soft);border-top:4px double var(--suggest);border-top-width:6px}
+.part h3{font-size:1rem}
+.part.fact h3{color:var(--fact)} .part.sugg h3{color:var(--suggest)}
+.part ul{margin:0;padding-left:1.2em}
+.why{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem}
+figure{margin:0;display:flex;flex-direction:column;gap:.5rem}
+figure img{border:1px solid var(--line);border-radius:8px;display:block;width:100%;height:auto}
+figcaption{font-size:.85rem;color:var(--muted)}
+.notice{font-size:.88rem;color:var(--muted);border-left:3px solid var(--line);padding-left:.8rem}
+
+/* timeline */
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
+.steps li{display:grid;grid-template-columns:4.6rem 1fr;gap:1rem;padding-block:.9rem;border-top:1px solid var(--line)}
+.steps li:last-child{border-bottom:1px solid var(--line)}
+.steps time{font-family:var(--mono);font-size:.85rem;color:var(--muted);padding-top:.15rem;font-variant-numeric:tabular-nums}
+.steps .body{display:flex;flex-direction:column;gap:.3rem;min-width:0}
+.steps h3 a{color:inherit;text-decoration:none}
+.steps h3 a:hover{text-decoration:underline}
+.who{display:flex;gap:.4rem;flex-wrap:wrap}
+.tag{font-size:.74rem;font-weight:700;padding:.05rem .5rem;border-radius:99px;white-space:nowrap}
+.tag.h{background:var(--human-soft);color:var(--human)}
+.tag.a{background:var(--sunk);color:var(--muted)}
+
+/* decisions */
+.decisions{display:flex;flex-direction:column;gap:1rem}
+.decision{display:flex;flex-direction:column;gap:.35rem;padding-left:1rem;border-left:3px solid var(--human)}
+.decision blockquote{margin:0;font-size:.92rem;color:var(--muted)}
+.decision blockquote::before{content:"発言より　";font-size:.75rem;font-weight:700;color:var(--human)}
+
+/* documents */
+.doc{background:var(--surface);border:1px solid var(--line);border-radius:10px;max-height:34rem;overflow:auto;padding:1.2rem 1.3rem}
+.doc pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--body);font-size:.9rem;line-height:1.8}
+.files{width:100%;border-collapse:collapse;font-size:.92rem}
+.files th,.files td{text-align:left;padding:.6rem .5rem;border-bottom:1px solid var(--line);vertical-align:top}
+.files th{font-size:.8rem;color:var(--muted);font-weight:500}
+.tablewrap{overflow-x:auto}
+
+/* conversation */
+.chapters{display:flex;flex-wrap:wrap;gap:.4rem}
+.chapters a{font-size:.82rem;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:.15rem .7rem}
+.chapters a:hover{border-color:var(--human)}
+.session-head{display:flex;flex-direction:column;gap:.2rem;padding-top:1.5rem;border-top:2px solid var(--ink)}
+.log{display:flex;flex-direction:column;gap:.9rem}
+.chapter-mark{font-family:var(--display);font-weight:900;font-size:1.05rem;padding-top:1.6rem;color:var(--human);scroll-margin-top:1rem}
+.msg{display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.msg .meta{font-size:.75rem;color:var(--muted);display:flex;gap:.6rem;align-items:baseline}
+.msg .meta b{font-size:.8rem}
+.msg.user{align-self:flex-end;max-width:92%}
+.msg.user .meta{justify-content:flex-end}
+.msg.user .meta b{color:var(--human)}
+.msg.user .bubble{background:var(--human-soft);border-radius:12px 12px 2px 12px;padding:.8rem 1rem;white-space:pre-wrap;word-break:break-word}
+.msg.claude .bubble{background:var(--surface);border:1px solid var(--line);border-radius:2px 12px 12px 12px;padding:.8rem 1.1rem;overflow-wrap:anywhere}
+.msg.ask .bubble{background:var(--surface);border:1px dashed var(--muted);border-radius:8px;padding:.8rem 1.1rem}
+.bubble>*:first-child{margin-top:0} .bubble>*:last-child{margin-bottom:0}
+.bubble h1,.bubble h2,.bubble h3,.bubble h4{font-family:var(--display);font-size:1rem;margin:1.1em 0 .4em}
+.bubble p,.bubble ul,.bubble ol{margin:.5em 0}
+.bubble ul,.bubble ol{padding-left:1.4em}
+.bubble pre{background:var(--sunk);border-radius:6px;padding:.7rem .8rem;overflow-x:auto;font-size:.82rem;line-height:1.55}
+.bubble code{background:var(--sunk);border-radius:4px;padding:.05em .3em}
+.bubble pre code{background:none;padding:0}
+.bubble table{border-collapse:collapse;font-size:.85rem;line-height:1.55;margin:.6em 0}
+.bubble th,.bubble td{border:1px solid var(--line);padding:.35rem .5rem;vertical-align:top}
+.bubble th{background:var(--sunk)}
+.bubble blockquote{margin:.5em 0;padding-left:.8rem;border-left:3px solid var(--line);color:var(--muted)}
+.bubble hr{border:0;border-top:1px solid var(--line)}
+.note{font-size:.8rem;color:var(--muted);text-align:center}
+details.tools{font-size:.8rem;color:var(--muted);margin-left:.4rem}
+details.tools summary{cursor:pointer;width:fit-content}
+details.tools ul{margin:.3rem 0 0;padding-left:1.2rem;font-family:var(--mono);font-size:.76rem;line-height:1.7;overflow-wrap:anywhere}
+.foot{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);font-size:.85rem;color:var(--muted);display:flex;flex-direction:column;gap:.4rem}
+
+/* screens */
+.browser{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.browser-bar{display:flex;align-items:center;gap:6px;padding:.45rem .8rem;background:var(--sunk);border-bottom:1px solid var(--line)}
+.browser-bar span{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.browser-bar em{font-style:normal;font-size:.75rem;color:var(--muted);margin-left:.6rem}
+.browser img{border:0;border-radius:0}
+.example{display:flex;flex-direction:column;gap:1.3rem;padding:1.4rem;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.ex-head{display:flex;gap:1rem;align-items:flex-start}
+.ex-no{font-family:var(--display);font-weight:900;font-size:.85rem;background:var(--ink);color:var(--paper);border-radius:6px;padding:.15rem .55rem;white-space:nowrap}
+.ex-head>div{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+.ex-kind{font-size:.8rem;font-weight:700;color:var(--human)}
+.ex-q{font-weight:700;font-size:1.02rem;line-height:1.6}
+.ex-meta{font-size:.8rem;color:var(--muted)}
+.step{font-size:.8rem;font-weight:700;color:var(--muted);letter-spacing:.04em}
+.example figure.op img{max-width:620px}
+details.full summary{cursor:pointer;font-size:.88rem;color:var(--fact);width:fit-content}
+details.full img{margin-top:.8rem;border:1px solid var(--line);border-radius:8px;width:100%;height:auto}
+@media (max-width:640px){.example{padding:1rem}}
+/* why */
+blockquote.src{margin:0;padding:.9rem 1.1rem;background:var(--human-soft);border-radius:8px;font-size:.95rem;line-height:1.8}
+blockquote.src::before{content:"作者の文章より";display:block;font-size:.72rem;font-weight:700;color:var(--human);margin-bottom:.2rem}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
+@media (max-width:640px){.roles{grid-template-columns:1fr}}
+.role{border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem;background:var(--surface);display:flex;flex-direction:column;gap:.5rem;min-width:0}
+.role.after{border:2px solid var(--human)}
+.role-label{font-weight:700;font-size:.92rem}
+.role.after .role-label{color:var(--human)}
+.role ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:.4rem;font-size:.9rem;line-height:1.65}
+.role b{display:block;font-size:.78rem;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+
+<style>html{-webkit-text-size-adjust:100%}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <p class="eyebrow">治験コーディネーター向け 業務相談アプリ（試作）の制作記録</p>
+  <h1>CRC相談役アプリの作り方</h1>
+  <p class="lead">やりたいことを文章で書き、AI（Claude）と会話しながら作りました。プログラムも、架空の手順書も、設計書も、書いたのは AI です。人がしたのは、要件を書くこと、AI の質問に答えて方針を決めること、動かして「ここが違う」と伝えることでした。</p>
+  <dl class="facts">
+    <div><dt>人が書いたもの</dt><dd>最初の要件（約5,000字）と、会話での発言19回</dd></div>
+    <div><dt>AI が作ったもの</dt><dd>アプリ本体、設計書、架空の手順書など35件</dd></div>
+    <div><dt>かかった時間</dt><dd>8月9日 22:27 〜 8月10日 1:51（約3時間半）</dd></div>
+  </dl>
+</header>
+
+<section id="product">
+  <p class="eyebrow">できあがったもの</p>
+  <h2>病院と治験を選んで、困りごとを相談する</h2>
+  <p>CRC が病院と治験をボタンで選び、起きたことを書いて送ります。アプリは、選ばれた病院・治験の資料だけを読んで、次の2つを<strong>分けて</strong>返します。</p>
+  <div class="split">
+    <div class="part fact">
+      <h3>資料に書いてあること</h3>
+      <ul>
+        <li>どの資料のどこに書いてあるかと、原文そのままの引用</li>
+        <li>根拠の確かさを3段階で表示（明確な根拠あり／解釈の余地あり／根拠なし）</li>
+        <li>引用が本当に原文にあるかを、プログラムで照合</li>
+      </ul>
+    </div>
+    <div class="part sugg">
+      <h3>アプリの提案</h3>
+      <ul>
+        <li>医師・上司・被験者・治験依頼者へ、次に何をするかを優先順に</li>
+        <li>それぞれに理由と時期を添える</li>
+        <li>情報が足りないときは、確認すべきことを聞き返す</li>
+      </ul>
+    </div>
+  </div>
+  <div class="why">
+    <p><strong>なぜ分けるのか。</strong>「まず医師に報告し、その後モニターへ」という順序は、SOP には書かれていません。アプリが考えた提案です。規則と提案が混ざると、CRC が医師や上司に「SOP にこう書いてある」と誤って説明してしまいます。そのため画面では二重線で区切り、提案の側に「これはアプリの提案です」と常に表示しています。</p>
+  </div>
+  <h3>画面</h3>
+  <figure>
+    <div class="browser"><div class="browser-bar"><span></span><span></span><span></span><em>CRC業務支援アプリ</em></div>
+    <img src="showcase/initial.png" alt="アプリを開いたときの画面全体。見出し「CRC業務支援アプリ」の下に、病院のボタン3つ（さくら総合病院・みなと大学医学部附属病院・青葉記念クリニック）、治験のボタン3つ（ABC-201試験・XYZ-305試験・KLM-102試験）、質問の入力欄、「質問する」ボタンがあるだけ" width="1100" height="600"></div>
+    <figcaption>開いたときの画面全体です。これで全部で、ほかのメニューはありません。病院と治験をボタンで選び、質問を書いて「質問する」を押します。</figcaption>
+  </figure>
+
+  <h3 id="examples">使ってみた例</h3>
+  <p>実際に3つ質問しました。どれも、操作した画面、返ってきた回答の順に載せています。回答の上には、読んだ資料の一覧（14〜15件）も表示されますが、長いので省きました。省いていない画面は、各例の最後の「画面全体を1枚で見る」で開けます。</p>
+
+  <article class="example">
+    <header class="ex-head"><span class="ex-no">例1</span><div><p class="ex-kind">イレギュラーの相談</p><p class="ex-q">「被験者から電話があり、治験薬を3日分飲み忘れたと言っています。どうすればよいですか？」</p><p class="ex-meta">さくら総合病院 × ABC-201試験　／　回答まで約60秒</p></div></header>
+    <figure class="op"><p class="step">操作</p><img src="showcase/op1.png" alt="さくら総合病院とABC-201試験を選び、質問欄に飲み忘れの相談を入力した画面" width="876" height="505" loading="lazy"></figure>
+    <figure><p class="step">回答の前半：資料に書いてあること</p><img src="showcase/a1-fact.png" alt="確信度は「解釈の余地あり」。3日分の飲み忘れそのものへの手順は資料にないこと、単発の飲み忘れの服用ルールと、服薬率80%未満なら治験責任医師に報告する規定はあることを述べ、3件を原文のまま引用。各引用に「原文と一致」の表示" width="876" height="982" loading="lazy">
+      <figcaption>複数日の飲み忘れについては資料に定めがないので、断定せず「解釈の余地あり」としています。引用の右上の「原文と一致」は、引用が資料に実際にあるかをプログラムで照合した結果です。</figcaption></figure>
+    <figure><p class="step">回答の後半：アプリの提案</p><img src="showcase/a1-actions.png" alt="「これはアプリによる提案です」の注記のあと、1 被験者に体調と事実を確認、2 医師に報告し判断を仰ぐ、3 上司に一報、4 医師の判断後に被験者へ服用方法を案内、5 該当すれば治験依頼者のモニターへ報告、6 記録とNote to File、の6件が理由と時期つきで並ぶ。最後に確認が必要な事項が5件" width="876" height="1306" loading="lazy">
+      <figcaption>二重線の下に分けて表示しています。連絡の順序は医師 → 上司 → 被験者 → 治験依頼者が基本ですが、ここでは事実を確かめるために被験者への確認が先に来ています。この組み替えの理由も、行動原則の文書に書いてあります。</figcaption></figure>
+    <details class="full"><summary>画面全体を1枚で見る</summary><img src="showcase/full-1.png" alt="例1の画面全体" width="1100" height="3716" loading="lazy"></details>
+  </article>
+
+  <article class="example">
+    <header class="ex-head"><span class="ex-no">例2</span><div><p class="ex-kind">その病院にしかない事情</p><p class="ex-q">「木曜日に被験者が来院しますが、薬剤師が不在です。治験薬を渡せますか？」</p><p class="ex-meta">青葉記念クリニック × KLM-102試験　／　回答まで約50秒</p></div></header>
+    <figure class="op"><p class="step">操作</p><img src="showcase/op4.png" alt="青葉記念クリニックとKLM-102試験を選び、薬剤師不在日の治験薬交付について入力した画面" width="876" height="505" loading="lazy"></figure>
+    <figure><p class="step">回答の前半：資料に書いてあること</p><img src="showcase/a4-fact.png" alt="確信度は「解釈の余地あり」。木曜は非常勤薬剤師の不在日だが、事前に薬剤師が払い出して区分保管しておけば、治験責任医師・看護師・CRCが交付できること、この治験の投与日は原則火曜か金曜と決まっていることを述べ、病院の手順書と、病院×治験の実施手順書から6件を引用。すべて「原文と一致」" width="876" height="1354" loading="lazy">
+      <figcaption>青葉記念クリニックは薬剤師が週2日勤務という設定です。病院の手順書に加えて、「この病院でこの治験をどう実施するか」を決めた手順書まで読んで答えています。前もって区分保管されているかどうかで答えが変わるので、「解釈の余地あり」です。</figcaption></figure>
+    <figure><p class="step">回答の後半：アプリの提案</p><img src="showcase/a4-actions.png" alt="1 治験薬が区分保管されているかを確認、2 来院の目的を医師に確認、3 未準備なら直近の勤務日に薬剤師へ払い出しを依頼、4 来院時に交付して記録、の4件。確認が必要な事項が3件" width="876" height="951" loading="lazy">
+      <figcaption>まず治験薬が区分保管されているかを確かめ、来院の目的を医師に確認し、準備ができていなければ次の勤務日に薬剤師へ払い出しを頼む、という順です。最後に、聞き返すべきことが3つ挙がっています。</figcaption></figure>
+    <details class="full"><summary>画面全体を1枚で見る</summary><img src="showcase/full-3.png" alt="例2の画面全体" width="1100" height="3529" loading="lazy"></details>
+  </article>
+
+  <article class="example">
+    <header class="ex-head"><span class="ex-no">例3</span><div><p class="ex-kind">資料に書かれていないこと</p><p class="ex-q">「被験者の保険加入の手続きはどのように行いますか？」</p><p class="ex-meta">さくら総合病院 × ABC-201試験　／　回答まで約16秒</p></div></header>
+    <figure class="op"><p class="step">操作</p><img src="showcase/op3.png" alt="さくら総合病院とABC-201試験を選び、保険加入の手続きについて入力した画面" width="876" height="505" loading="lazy"></figure>
+    <figure><p class="step">回答</p><img src="showcase/a3-none.png" alt="確信度「根拠なし」。参照したどの資料にも保険加入の手続きの記載はないと答え、どの資料を確認したかを示す。確認が必要な事項として、何の手続きを指しているかの聞き返しと、治験事務局や担当モニターへの確認の勧め" width="876" height="595" loading="lazy">
+      <figcaption>どの資料にもわざと書かなかった論点です。「根拠なし」と答え、それらしい手順をでっち上げていません。どの資料を確認したかを示したうえで、何の手続きを指しているのかを聞き返しています。</figcaption></figure>
+    <details class="full"><summary>画面全体を1枚で見る</summary><img src="showcase/full-2.png" alt="例3の画面全体" width="1100" height="2006" loading="lazy"></details>
+  </article>
+
+  <p class="notice">病院・治験・手順書・GCP の条文まで、中に入っている資料はすべて架空です。実データは契約前で使えないため、AI に「ありそうな粒度」で作らせました。病院によって規定が違う、手順書どうしが矛盾している、どこにも書いていない、といった場面をわざと仕込んであります。</p>
+</section>
+
+<section id="why">
+  <p class="eyebrow">なぜ作ったのか</p>
+  <h2>CRC の隣にいる、相談役がほしい</h2>
+  <p>アプリは、ある役割を果たさせるための手段です。先にあったのは「CRC の仕事を、こう支えたい」という考えで、機能はそこから決まりました。ここでは、作者が書いた文章からその考えをたどります。</p>
+
+  <h3>出発点：CRC を支える</h3>
+  <p>要件の最初の一文はこうです。</p>
+  <blockquote class="src">このプロジェクトでは、治験業界で働くCRCを支援する業務アプリケーションの開発を行います。</blockquote>
+  <p>CRC が拠りどころにする資料は、国の GCP、病院の手順書、製薬会社の治験の資料、そして「この病院でこの治験をどう実施するか」を決めた資料の4層に分かれています。最後の層は、要件の言葉で言えば<q>病院＊治験の数だけ存在する</q>ものです。いくつもの病院と治験を担当すれば、どの資料のどこを見ればよいかを探すだけでも手間がかかります。最初に考えたのは、病院と治験を指定して質問すると、関係する資料だけを読んで、答えと根拠の原文を示してくれるアプリでした。</p>
+  <p>このとき、一つだけはっきり書いていたことがあります。</p>
+  <blockquote class="src">論拠となる出展が存在しない、もしくは論拠となる出展は存在するが解釈・判断に一定の余地がある場合は、「出典はないが自信を持った回答」をするのではなく、その旨を誠実に回答する。</blockquote>
+
+  <h3>期待する役割が変わった：資料の検索から、相談役へ</h3>
+  <p>一度動くものができたあと、CRC の側から要望が届きました。資料を探すだけでなく、イレギュラーな対応の相談役になってほしい、というものです。作者はこれを、アプリの役割そのものが変わる話として受け止めています。</p>
+  <div class="roles">
+    <div class="role before"><p class="role-label">それまでの構図：ドキュメントの検索代行</p><ol><li><b>ユーザー</b>ドキュメントに関する質問を投げる</li><li><b>チャットボット</b>ドキュメントに関する質問を受け付け、「ユーザーが質問している内容はドキュメントのどこに記載されているか？回答としてはどうなるか？」を回答するようモデルにリクエストを投げる</li><li><b>ドキュメント</b>チャットボットから適宜参照される</li></ol></div>
+    <div class="role after"><p class="role-label">本当に期待されていた構図：CRCの業務を支援する秘書・メンター</p><ol><li><b>ユーザー</b>日常の業務の中での困りごとをチャットボットに投げる</li><li><b>チャットボット</b>CRCの困りごとに対するサポート・取るべき行動をアドバイスする</li><li><b>ドキュメント</b>チャットボットから適宜参照される</li></ol></div>
+  </div>
+  <p class="notice">二つの構図は、作者の発言（<a href="#ch-change">会話1、1:15</a>）の文言をそのまま並べたものです。</p>
+  <p>リポジトリの名前を決めるときにも、作者はこう書いています。</p>
+  <blockquote class="src">今はドキュメント検索代行的な立ち位置ですが、最終的には、CRCの行動をサポートする秘書とかアドバイザーとかメンター的な立ち位置になってほしいと思っています。</blockquote>
+
+  <h3>相談役は「よい CRC」でなければならない</h3>
+  <p>相談に乗るなら、アプリは資料を読めるだけでは足りません。CRC としてどう振る舞うのが正しいかを知っている必要があります。</p>
+  <blockquote class="src">このようなチャットボットを作る場合、チャットボットは単に「ドキュメント検索代行」ではなく、「よきCRCであること」という役割を負うことになります。この「よきCRCであること」が具体的にどう言うものなのか、は事前に定義しておいて、チャットボットが裏のモデルにリクエストを投げる際に、システムプロンプト等に毎回含めて投げる必要があると思っています。</blockquote>
+  <p>こうして「CRC 行動原則」の文書が生まれ、回答は「資料に書いてあること」と「アプリの提案」の二本立てになりました。上で見た画面は、この役割を形にしたものです。</p>
+</section>
+
+<section id="process">
+  <p class="eyebrow">作り方の流れ</p>
+  <h2>要件を書いて渡し、会話で詰めていく</h2>
+  <p>時刻は実際の会話の記録です。見出しを押すと、下の会話の該当箇所に飛びます。</p>
+  <ol class="steps">
+    <li><time>22:27</time><div class="body"><h3><a href="#ch-read">要件を書いて、AI に読ませる</a></h3><div class="who"><span class="tag h">人</span></div><p>あらかじめ書いておいた要件（<a href="#requirement">原文は下に全文</a>）を AI に渡しました。資料の4つの層（GCP／病院／治験／病院×治験）と、「根拠がないなら正直にそう言う」ことが中心です。</p></div></li>
+    <li><time>22:42</time><div class="body"><h3><a href="#ch-discuss">会話で方針を決める</a></h3><div class="who"><span class="tag h">人</span><span class="tag a">AI</span></div><p>AI が要件を整理し、決めるべき論点を挙げてきます。人はそれに答えて方針を決めます。決まったことを AI が設計書と「AI への引き継ぎ書」にまとめました。</p></div></li>
+    <li><time>22:52</time><div class="body"><h3><a href="#ch-data">架空の資料を作る</a></h3><div class="who"><span class="tag a">AI</span></div><p>3病院 × 3治験ぶんの手順書・プロトコル・議事録などを AI が書きました。病院ごとに規定が違う箇所、手順書どうしの矛盾、どこにも書かれていない論点を、検証用にわざと入れています。</p></div></li>
+    <li><time>23:23</time><div class="body"><h3><a href="#ch-build">アプリを作る</a></h3><div class="who"><span class="tag h">人</span><span class="tag a">AI</span></div><p>プログラムは AI が書きました。人がしたのは、AI を使うための鍵（API キー）の用意、使う AI の種類の選択、「回答は待たせずに少しずつ表示してほしい」という注文です。</p></div></li>
+    <li><time>23:48</time><div class="body"><h3><a href="#ch-run">動かして直す</a></h3><div class="who"><span class="tag h">人</span><span class="tag a">AI</span></div><p>ブラウザで開くとエラー。画面のメッセージを貼って伝えると、AI が原因を調べて直しました。仕込んだ論点で回答の質も確かめています。</p></div></li>
+    <li><time>0:47</time><div class="body"><h3><a href="#ch-tests">試す質問をまとめる</a></h3><div class="who"><span class="tag h">人</span><span class="tag a">AI</span></div><p>AI が本格的なテスト計画書を作り始めたので、人が止めて「試作の段階ではそこまで要らない」と伝えました。質問例を1枚にまとめる形に落ち着いています。</p></div></li>
+    <li><time>1:15</time><div class="body"><h3><a href="#ch-change">要件を変える：検索から相談役へ</a></h3><div class="who"><span class="tag h">人</span><span class="tag a">AI</span></div><p>「資料を探すだけでなく、イレギュラーな対応の相談役にしたい。医師・上司・被験者・依頼者それぞれへの次の行動まで出してほしい」という要望を受けて、設計からやり直しました。「よい CRC とはどう動くか」を AI に教える文書（行動原則）を新しく足しています。</p></div></li>
+    <li><time>1:50</time><div class="body"><h3><a href="#ch-commit">記録に残す</a></h3><div class="who"><span class="tag a">AI</span></div><p>作ったものを保存し（途中で別の窓から GitHub にも登録）、ここで一区切りです。</p></div></li>
+  </ol>
+</section>
+
+<section id="decisions">
+  <p class="eyebrow">人が決めたこと</p>
+  <h2>AI に任せず、人が判断したところ</h2>
+  <p>コードを書く作業は AI に任せましたが、次のような判断は人がしています。どれも CRC の現場や運用の事情を知っているからこそ出てくる判断で、AI が自分から言い出したものではありません。</p>
+  <div class="decisions">
+    <div class="decision"><h3>病院と治験は、文字で打たせずボタンで選ばせる</h3><p>「さくら総合」「さくら総合病院」のような表記の揺れで、資料を取り違えないためです。</p><blockquote>病院名のリスト、および、治験名のリストは画面にあらかじめ並んでいて、ユーザーはそのボタンを押して選択するだけ、とするのが、ユーザビリティが高く、かつ指定内容を固定化できてよいと思います。</blockquote></div>
+    <div class="decision"><h3>資料そのものには手を入れない</h3><p>どの病院・どの治験の資料かは、フォルダの分け方で管理します。資料にラベルを書き足す案は採りませんでした。</p><blockquote>既存の文書には既存のフォーマットが存在すると予想していて、この業務アプリ単独の要件で勝手にフォーマットに介入するのは難しいと思いっています。</blockquote></div>
+    <div class="decision"><h3>資料は毎回、全文をそのまま読ませる</h3><p>資料を細かく切って検索用の索引を作る方式（RAG）もありますが、更新のたびに作り直しが要ります。治験の手順書は「ただし〜の場合は」という例外が多く、切ると条件が抜け落ちる心配もありました。</p><blockquote>各文書は年に10回ほど更新されるそうで、RAG化するとそのたびにデータを入れなおす必要があり微妙なため、まずは「 メタデータで文書を絞ってから全文をLLMに渡す方式（PoC規模なら十分実用的」で作成します。</blockquote></div>
+    <div class="decision"><h3>凝った作りにしない</h3><p>AI は作り込もうとすると、本来の要件への注意が薄れます。試作では要件を満たすことを最優先にしました。</p><blockquote>簡易な実装でよいのでまずは要件の実現に注力したいです。</blockquote></div>
+    <div class="decision"><h3>テストの書類を作り込まない</h3><p>試作の段階では要望が大きく動きます。細かいテスト仕様を整えても、手間に見合いません。</p><blockquote>細かくテストケースを作っておいてリグレッションテストをやって・・とかやっていると、それでうまくいく要素に対して管理の手間が見合わないです。</blockquote></div>
+    <div class="decision"><h3>「よい CRC の振る舞い」は、プログラムでなく文書に書く</h3><p>連絡の順序や判断の原則は業務知識そのものです。プログラムに埋め込むと、CRC が読むことも直すこともできません。文書として置いておけば、「順序が違う」と言われたときに文書を直すだけで済みます。</p><blockquote>この「よきCRCであること」が具体的にどう言うものなのか、は事前に定義しておいて、チャットボットが裏のモデルにリクエストを投げる際に、システムプロンプト等に毎回含めて投げる必要があると思っています。</blockquote></div>
+  </div>
+</section>
+
+<section id="requirement">
+  <p class="eyebrow">最初に書いた要件（原文）</p>
+  <h2>requirement.md 初版</h2>
+  <p>AI に最初に渡した文章です。会話の2通目で「④は②と③を上位文書とする」の1行を書き足しただけで、その後は変えていません。誤字も含めて原文のままです。</p>
+  <div class="doc"><pre># 概要
+
+このプロジェクトでは、治験業界で働くCRCを支援する業務アプリケーションの開発を行います。
+
+# データソース
+データソースとして、各種治験の資料が与えられます。具体的には以下を想定しています。
+- ①GCP：good crinical practice
+    - 国が治験に関するベストプラクティスを定めた資料。
+- ②病院そのものに関する資料（病院が作成する資料）：
+    - その病院が制定した文書。治験とは関係なく存在し、CRCが所属する会社が関係を持つ治験の数だけ存在する。
+    - GCPが上位文書である。
+    - 文書の例として以下がある。
+        - hosp sop
+        - 薬剤科のsop
+        - 検査科のSOP
+        - 看護科のSOP
+- ③治験そのものに関する資料（製薬会社が作成した資料）
+    - 新薬を開発して、治験を実施したい製薬会社が定めた資料。病院とは関係なく存在し、CRCが所属する会社が取り扱う治験の数だけ存在する。
+    - 文書の例として以下がある。
+        - プロトコル・治験実施計画書
+        - 治験薬概要書
+        - 同意説明文書
+        - ラボマニュアル
+        - コレクションフローチャート
+        - 治験薬取扱説明書
+- ④その病院で行う治験に関する資料
+    - CRCが、治験を行いたい製薬会社と、治験を受け入れたい病院をマッチングさせ、いざその病院である治験を実施する、となった際に、「この病院でこの治験をどのように実施するか」を取り決めた資料。
+    - 病院＊治験の数だけ存在する。
+    - 文書の例として以下がある。
+        - specific SOP : 
+            - note to file
+            - 薬剤師ミーティング議事録
+
+
+
+# 機能要件
+
+以下の仕様を満たす業務アプリを作成する
+
+- CRCが、病院名と治験名を指定したうえで、業務手順に関する質問を行う。
+- 業務アプリは、以下の処理を行う
+  - 関連する文書を特定する。つまり、
+    - ①GCP：good crinical practice：これは常に関連する
+    - ②病院そのものに関する資料（病院が作成する資料）：指定された病院名に関連する資料のみを特定する
+    - ③治験そのものに関する資料（製薬会社が作成した資料）：指定された治験名に関連する資料のみを特定する
+    - ④その病院で行う治験に関する資料：「指定された病院・治験」に関する資料のみを特定する。
+  - CRCが質問してきた内容に対して、上記の資料を参照し、質問に対する回答と、出展箇所および業務マニュアルの該当箇所の原文を表示する。
+    - 論拠となる出展が存在しない、もしくは論拠となる出展は存在するが解釈・判断に一定の余地がある場合は、「出典はないが自信を持った回答」をするのではなく、その旨を誠実に回答する。
+
+
+
+# 本プロジェクトの進め方について
+
+- 本プロジェクトは、上記で定義した業務アプリケーションの開発のPOCを行います。
+
+- データソースとして、上記に記載した資料は、残念ながら現状手元には存在しません。これは、本プロジェクトの正式な契約締結が未完了であること、データソースのAI利用に関するガイドラインが定まっていないことに起因します。
+
+- しかしながら、本物のデータソースがない状態でありながらも、PoC開発は推進していく必要があります。したがって、本プロジェクトは以下のように進めていきます。
+
+  - データソースの作成：
+    - 上記のデータソースをサンプルで生成します。何かしらあればいいので内容は任せます。実物はpdfだと思いますが、今回はPoCのためmarkdown形式で問題ありません。
+  - 業務アプリの開発：
+    - 実際に業務アプリを開発します。上記は機能要件を述べたのみで実装については議論できていませんので、実装段階であらかじめclaude、あなたと議論を交わしてplanを練ったうえで実装に取り掛かりたいで、ここは後ほど議論させてください。
+  - 使用感のテスト：
+    - 業務アプリが完成したら、実際に人間が触ってUATを実施します。これは人間がやります。
+  - フィードバック：
+    - UAT実施後、ユーザーからのフィードバックを受けて仕様と実装を改修します。このUATとフィードバックのループを何度か回すことによって業務アプリを洗練させていきます。</pre></div>
+</section>
+
+<section id="handover">
+  <p class="eyebrow">AI への引き継ぎ書</p>
+  <h2>会話で決まったことを、文書に残しておく</h2>
+  <p>AI は、新しい会話を始めると前の会話の内容を覚えていません。そこで、決まったことをプロジェクトのフォルダに文書として置き、AI が作業の最初に必ず読むようにしています。人の新人に渡す引き継ぎ書と同じ役割です。</p>
+  <div class="tablewrap"><table class="files">
+    <thead><tr><th>文書</th><th>中身</th><th>書く人</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://github.com/alphajinsei/crc-copilot/blob/main/requirement.md">requirement.md</a></td><td>最初に書いた要件の原文</td><td>人だけ（AI は編集しない）</td></tr>
+      <tr><td><a href="https://github.com/alphajinsei/crc-copilot/blob/main/docs/design.md">docs/design.md</a></td><td>会話で決まった設計と、その理由</td><td>AI（会話のたびに追記）</td></tr>
+      <tr><td><a href="https://github.com/alphajinsei/crc-copilot/blob/main/CLAUDE.md">CLAUDE.md</a></td><td>毎回の前提。このプロジェクトの本質、覆してはいけない判断、資料の置き方</td><td>AI（人が確認）</td></tr>
+      <tr><td><a href="https://github.com/alphajinsei/crc-copilot/tree/main/data/00_policy">data/00_policy/</a></td><td>CRC の行動原則と、関係者への連絡の順序（架空）</td><td>AI が作り、CRC が直す想定</td></tr>
+    </tbody>
+  </table></div>
+  <p>たとえば CLAUDE.md の冒頭には、こう書いてあります。</p>
+  <div class="doc"><pre>## このプロジェクトの本質
+
+**CRC業務の相談役。** 単なるドキュメント検索の代行ではない（2026-08-10に要件変更）。
+
+CRCが日常業務で直面するイレギュラーな事象について相談を受け、以下の2つを返す。
+
+1. **資料に基づく事実** — 関連文書を特定し、出典とともに示す
+2. **推奨アクション** — 各ステークホルダーへ次に取るべき行動を優先度順に提案
+
+**この2つを混ぜてはいけない。** 「まず医師に報告し、その後モニターへ」といった順序は
+SOPに書かれておらず、アプリの提案である。規則と提案が区別できないと、
+CRCが上司や医師に誤った説明をして実害が出る。</pre></div>
+  <p class="notice">プログラム一式は <a href="https://github.com/alphajinsei/crc-copilot">GitHub（crc-copilot）</a>で公開しています。</p>
+</section>
+
+<section id="conversation">
+  <p class="eyebrow">会話の全文</p>
+  <h2>人と AI のやりとり</h2>
+  <p>会話は記録のまま載せています。省いたのは、編集ソフトが自動で添える「いま開いているファイル」の情報と、API キーの文字列（伏せ字にしました）だけです。AI が裏で行った作業（ファイルの作成、コマンドの実行など）は1行ずつの一覧にして、折りたたんであります。</p>
+  <nav class="chapters" aria-label="会話の章">
+    <a href="#ch-read">要件を読ませる</a><a href="#ch-discuss">方針を決める</a><a href="#ch-data">資料を作る</a><a href="#ch-build">アプリを作る</a><a href="#ch-run">動かして直す</a><a href="#ch-tests">質問をまとめる</a><a href="#ch-change">要件を変える</a><a href="#ch-commit">記録に残す</a><a href="#ch-next">翌日</a><a href="#session-git">会話2：GitHub</a>
+  </nav>
+  <div id="log-root"><p class="note">会話を読み込んでいます…</p></div>
+</section>
+
+<footer class="foot">
+  <p>アプリの中の資料（病院・治験・手順書・GCP の条文）はすべて架空で、実務の判断には使えません。</p>
+  <p>作ったもの：<a href="https://github.com/alphajinsei/crc-copilot">github.com/alphajinsei/crc-copilot</a></p>
+</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script>
+(function(){
+  const CHAPTERS={main:{0:['ch-read','要件を読ませる'],2:['ch-discuss','方針を決める'],10:['ch-data','架空の資料を作る'],64:['ch-build','アプリを作る'],162:['ch-run','動かして直す'],176:['ch-tests','試す質問をまとめる'],195:['ch-change','要件を変える：検索から相談役へ'],291:['ch-commit','記録に残す'],305:['ch-next','翌日：試す質問を増やす']}};
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  let md=t=>'<p>'+esc(t).replace(/\n/g,'<br>')+'</p>';
+  if(window.marked){
+    marked.use({gfm:true,breaks:true,renderer:{html(h){return esc(typeof h==='string'?h:(h&&h.text)||'')}}});
+    md=t=>marked.parse(t);
+  }
+  function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
+  function render(data){
+    const root=document.getElementById('log-root');root.innerHTML='';
+    data.sessions.forEach(s=>{
+      const head=el('div','session-head');head.id='session-'+s.id;
+      head.appendChild(el('h3',null,esc(s.title)));
+      head.appendChild(el('p','eyebrow',esc(s.span)));
+      root.appendChild(head);
+      const log=el('div','log');
+      const ch=CHAPTERS[s.id]||{};
+      s.entries.forEach((x,i)=>{
+        if(ch[i]){const m=el('div','chapter-mark',esc(ch[i][1]));m.id=ch[i][0];log.appendChild(m)}
+        if(x.r==='user'){const m=el('div','msg user');m.appendChild(el('div','meta','<b>作者</b><span>'+esc(x.ts)+'</span>'));const b=el('div','bubble');b.textContent=x.text;m.appendChild(b);log.appendChild(m)}
+        else if(x.r==='claude'){const m=el('div','msg claude');m.appendChild(el('div','meta','<b>Claude</b><span>'+esc(x.ts)+'</span>'));const b=el('div','bubble',md(x.text));b.querySelectorAll('table').forEach(t=>{const w=el('div','tablewrap');t.replaceWith(w);w.appendChild(t)});m.appendChild(b);log.appendChild(m)}
+        else if(x.r==='ask'){const m=el('div','msg ask');m.appendChild(el('div','meta','<b>Claude</b><span>選択肢で質問</span>'));m.appendChild(el('div','bubble',md(x.text)));log.appendChild(m)}
+        else if(x.r==='answer'){const m=el('div','msg user');m.appendChild(el('div','meta','<b>作者</b><span>選択肢への回答</span>'));const b=el('div','bubble');b.textContent=x.text;m.appendChild(b);log.appendChild(m)}
+        else if(x.r==='note'){log.appendChild(el('p','note',esc(x.text)))}
+        else if(x.r==='tools'){const d=el('details','tools');d.appendChild(el('summary',null,'Claude の作業 '+x.items.length+' 件'));const ul=el('ul');x.items.forEach(t=>ul.appendChild(el('li',null,esc(t))));d.appendChild(ul);log.appendChild(d)}
+      });
+      root.appendChild(log);
+    });
+    if(location.hash){const t=document.getElementById(location.hash.slice(1));if(t)t.scrollIntoView()}
+  }
+  fetch('showcase/conversation.json').then(r=>r.json()).then(render).catch(()=>{document.getElementById('log-root').innerHTML='<p class="note">会話を読み込めませんでした。ページを再読み込みしてください。</p>'});
+})();
+</script>
+
+</body>
+</html>

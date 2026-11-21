@@ -192,6 +192,12 @@ src/
 検証目的でのAPI呼び出しは必要最小限にすること。ロジックの検証は
 `filter.ts` / `verify.ts` / `JsonFieldExtractor` を直接テストすれば足りる（APIキー不要）。
 
+## 紹介ページ（GitHub Pages）
+
+[docs/index.html](docs/index.html) は外部向けの紹介ページ（作り方の記録・回答の画面例・Claude との会話の全文）。
+main の `/docs` を GitHub Pages で公開する。画像と会話データは `docs/showcase/`。
+仕様書ではないので「ドキュメントは増やさない」の対象外。アプリの画面が変わっても自動では追従しない。
+
 ## 引用検証の5状態
 
 `verify.ts` は引用を5状態に分類する。詳細は design.md 4.5。
