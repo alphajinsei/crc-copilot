@@ -165,7 +165,7 @@ blockquote.src::before{content:"作者の文章より";display:block;font-size:.
   <h1>CRC相談役アプリの作り方</h1>
   <p class="lead">やりたいことを文章で書き、AI（Claude）と会話しながら作りました。プログラムも、架空の手順書も、設計書も、書いたのは AI です。人がしたのは、要件を書くこと、AI の質問に答えて方針を決めること、動かして「ここが違う」と伝えることでした。</p>
   <dl class="facts">
-    <div><dt>人が書いたもの</dt><dd>最初の要件（約5,000字）と、会話での発言19回</dd></div>
+    <div><dt>人が書いたもの</dt><dd>AI への依頼内容（約5,000字）と、会話での発言19回</dd></div>
     <div><dt>AI が作ったもの</dt><dd>アプリ本体、設計書、架空の手順書など35件</dd></div>
     <div><dt>かかった時間</dt><dd>8月9日 22:27 〜 8月10日 1:51（約3時間半）</dd></div>
   </dl>
@@ -243,7 +243,7 @@ blockquote.src::before{content:"作者の文章より";display:block;font-size:.
   <p>アプリは、ある役割を果たさせるための手段です。先にあったのは「CRC の仕事を、こう支えたい」という考えで、機能はそこから決まりました。ここでは、作者が書いた文章からその考えをたどります。</p>
 
   <h3>出発点：CRC を支える</h3>
-  <p>要件の最初の一文はこうです。</p>
+  <p><a href="#requirement">AI への依頼内容</a>の書き出しはこうです。</p>
   <blockquote class="src">このプロジェクトでは、治験業界で働くCRCを支援する業務アプリケーションの開発を行います。</blockquote>
   <p>CRC が拠りどころにする資料は、国の GCP、病院の手順書、製薬会社の治験の資料、そして「この病院でこの治験をどう実施するか」を決めた資料の4層に分かれています。最後の層は、要件の言葉で言えば<q>病院＊治験の数だけ存在する</q>ものです。いくつもの病院と治験を担当すれば、どの資料のどこを見ればよいかを探すだけでも手間がかかります。最初に考えたのは、病院と治験を指定して質問すると、関係する資料だけを読んで、答えと根拠の原文を示してくれるアプリでした。</p>
   <p>このとき、一つだけはっきり書いていたことがあります。</p>
@@ -270,7 +270,7 @@ blockquote.src::before{content:"作者の文章より";display:block;font-size:.
   <h2>要件を書いて渡し、会話で詰めていく</h2>
   <p>時刻は実際の会話の記録です。見出しを押すと、下の会話の該当箇所に飛びます。</p>
   <ol class="steps">
-    <li><time>22:27</time><div class="body"><h3><a href="#ch-read">要件を書いて、AI に読ませる</a></h3><div class="who"><span class="tag h">人</span></div><p>あらかじめ書いておいた要件（<a href="#requirement">原文は下に全文</a>）を AI に渡しました。資料の4つの層（GCP／病院／治験／病院×治験）と、「根拠がないなら正直にそう言う」ことが中心です。</p></div></li>
+    <li><time>22:27</time><div class="body"><h3><a href="#ch-read">要件を書いて、AI に読ませる</a></h3><div class="who"><span class="tag h">人</span></div><p>やりたいことを文章にまとめた「<a href="#requirement">AI への依頼内容</a>」を書いて、AI に渡しました。資料の4つの層（GCP／病院／治験／病院×治験）と、「根拠がないなら正直にそう言う」ことが中心です。</p></div></li>
     <li><time>22:42</time><div class="body"><h3><a href="#ch-discuss">会話で方針を決める</a></h3><div class="who"><span class="tag h">人</span><span class="tag a">AI</span></div><p>AI が要件を整理し、決めるべき論点を挙げてきます。人はそれに答えて方針を決めます。決まったことを AI が設計書と「AI への引き継ぎ書」にまとめました。</p></div></li>
     <li><time>22:52</time><div class="body"><h3><a href="#ch-data">架空の資料を作る</a></h3><div class="who"><span class="tag a">AI</span></div><p>3病院 × 3治験ぶんの手順書・プロトコル・議事録などを AI が書きました。病院ごとに規定が違う箇所、手順書どうしの矛盾、どこにも書かれていない論点を、検証用にわざと入れています。</p></div></li>
     <li><time>23:23</time><div class="body"><h3><a href="#ch-build">アプリを作る</a></h3><div class="who"><span class="tag h">人</span><span class="tag a">AI</span></div><p>プログラムは AI が書きました。人がしたのは、AI を使うための鍵（API キー）の用意、使う AI の種類の選択、「回答は待たせずに少しずつ表示してほしい」という注文です。</p></div></li>
@@ -296,9 +296,9 @@ blockquote.src::before{content:"作者の文章より";display:block;font-size:.
 </section>
 
 <section id="requirement">
-  <p class="eyebrow">最初に書いた要件（原文）</p>
-  <h2>requirement.md 初版</h2>
-  <p>AI に最初に渡した文章です。会話の2通目で「④は②と③を上位文書とする」の1行を書き足しただけで、その後は変えていません。誤字も含めて原文のままです。</p>
+  <p class="eyebrow">出発点</p>
+  <h2>AI への依頼内容（requirement.md）</h2>
+  <p>作者がまずこの文章を書き、AI に渡すところからすべてが始まりました。何を作りたいか、資料がどう分かれているか、アプリに何をしてほしいか、どう進めたいかを書いています。下の会話で「requirement.md」と出てくるのは、この文書のことです。誤字も含めて原文のままです。</p>
   <div class="doc"><pre># 概要
 
 このプロジェクトでは、治験業界で働くCRCを支援する業務アプリケーションの開発を行います。
@@ -327,6 +327,7 @@ blockquote.src::before{content:"作者の文章より";display:block;font-size:.
 - ④その病院で行う治験に関する資料
     - CRCが、治験を行いたい製薬会社と、治験を受け入れたい病院をマッチングさせ、いざその病院である治験を実施する、となった際に、「この病院でこの治験をどのように実施するか」を取り決めた資料。
     - 病院＊治験の数だけ存在する。
+    - 「②病院そのものに関する資料（病院が作成する資料）」と「③治験そのものに関する資料（製薬会社が作成した資料）」を上位文書とする
     - 文書の例として以下がある。
         - specific SOP : 
             - note to file
@@ -375,7 +376,7 @@ blockquote.src::before{content:"作者の文章より";display:block;font-size:.
   <div class="tablewrap"><table class="files">
     <thead><tr><th>文書</th><th>中身</th><th>書く人</th></tr></thead>
     <tbody>
-      <tr><td><a href="https://github.com/alphajinsei/crc-copilot/blob/main/requirement.md">requirement.md</a></td><td>最初に書いた要件の原文</td><td>人だけ（AI は編集しない）</td></tr>
+      <tr><td><a href="https://github.com/alphajinsei/crc-copilot/blob/main/requirement.md">requirement.md</a></td><td>作者が書いた AI への依頼内容。すべての出発点（<a href="#requirement">全文は上に</a>）</td><td>人だけ（AI は編集しない）</td></tr>
       <tr><td><a href="https://github.com/alphajinsei/crc-copilot/blob/main/docs/design.md">docs/design.md</a></td><td>会話で決まった設計と、その理由</td><td>AI（会話のたびに追記）</td></tr>
       <tr><td><a href="https://github.com/alphajinsei/crc-copilot/blob/main/CLAUDE.md">CLAUDE.md</a></td><td>毎回の前提。このプロジェクトの本質、覆してはいけない判断、資料の置き方</td><td>AI（人が確認）</td></tr>
       <tr><td><a href="https://github.com/alphajinsei/crc-copilot/tree/main/data/00_policy">data/00_policy/</a></td><td>CRC の行動原則と、関係者への連絡の順序（架空）</td><td>AI が作り、CRC が直す想定</td></tr>
@@ -423,6 +424,27 @@ CRCが上司や医師に誤った説明をして実害が出る。</pre></div>
     marked.use({gfm:true,breaks:true,renderer:{html(h){return esc(typeof h==='string'?h:(h&&h.text)||'')}}});
     md=t=>marked.parse(t);
   }
+  const REPO_AT_CONV='https://github.com/alphajinsei/crc-copilot/blob/2bbade2/';
+  function fixLinks(root){
+    root.querySelectorAll('a[href]').forEach(a=>{
+      const h=a.getAttribute('href');
+      if(/^https?:\/\/localhost/.test(h)){a.replaceWith(document.createTextNode(a.textContent));return}
+      if(!/^(https?:|#|mailto:)/.test(h)) a.href=REPO_AT_CONV+h.replace(/^\.?\//,'');
+      if(/^https?:/.test(a.href)&&!a.getAttribute('href').startsWith('#')){a.target='_blank';a.rel='noopener'}
+    });
+  }
+  function linkRequirement(root){
+    const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement.closest('a,pre')?NodeFilter.FILTER_REJECT:(/requirement\.md/.test(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP)});
+    const nodes=[];while(w.nextNode())nodes.push(w.currentNode);
+    nodes.forEach(n=>{
+      const frag=document.createDocumentFragment();
+      n.nodeValue.split(/(@?requirement\.md)/).forEach(part=>{
+        if(/^@?requirement\.md$/.test(part)){const a=document.createElement('a');a.href='#requirement';a.textContent=part;frag.appendChild(a)}
+        else if(part)frag.appendChild(document.createTextNode(part));
+      });
+      n.replaceWith(frag);
+    });
+  }
   function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
   function render(data){
     const root=document.getElementById('log-root');root.innerHTML='';
@@ -435,8 +457,8 @@ CRCが上司や医師に誤った説明をして実害が出る。</pre></div>
       const ch=CHAPTERS[s.id]||{};
       s.entries.forEach((x,i)=>{
         if(ch[i]){const m=el('div','chapter-mark',esc(ch[i][1]));m.id=ch[i][0];log.appendChild(m)}
-        if(x.r==='user'){const m=el('div','msg user');m.appendChild(el('div','meta','<b>作者</b><span>'+esc(x.ts)+'</span>'));const b=el('div','bubble');b.textContent=x.text;m.appendChild(b);log.appendChild(m)}
-        else if(x.r==='claude'){const m=el('div','msg claude');m.appendChild(el('div','meta','<b>Claude</b><span>'+esc(x.ts)+'</span>'));const b=el('div','bubble',md(x.text));b.querySelectorAll('table').forEach(t=>{const w=el('div','tablewrap');t.replaceWith(w);w.appendChild(t)});m.appendChild(b);log.appendChild(m)}
+        if(x.r==='user'){const m=el('div','msg user');m.appendChild(el('div','meta','<b>作者</b><span>'+esc(x.ts)+'</span>'));const b=el('div','bubble');b.textContent=x.text;linkRequirement(b);m.appendChild(b);log.appendChild(m)}
+        else if(x.r==='claude'){const m=el('div','msg claude');m.appendChild(el('div','meta','<b>Claude</b><span>'+esc(x.ts)+'</span>'));const b=el('div','bubble',md(x.text));b.querySelectorAll('table').forEach(t=>{const w=el('div','tablewrap');t.replaceWith(w);w.appendChild(t)});fixLinks(b);linkRequirement(b);m.appendChild(b);log.appendChild(m)}
         else if(x.r==='ask'){const m=el('div','msg ask');m.appendChild(el('div','meta','<b>Claude</b><span>選択肢で質問</span>'));m.appendChild(el('div','bubble',md(x.text)));log.appendChild(m)}
         else if(x.r==='answer'){const m=el('div','msg user');m.appendChild(el('div','meta','<b>作者</b><span>選択肢への回答</span>'));const b=el('div','bubble');b.textContent=x.text;m.appendChild(b);log.appendChild(m)}
         else if(x.r==='note'){log.appendChild(el('p','note',esc(x.text)))}
