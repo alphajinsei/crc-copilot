@@ -1,3 +1,4 @@
+import { posix } from "node:path";
 import type { LoadedDocument } from "@/lib/registry";
 import type {
   Answer,
@@ -25,6 +26,18 @@ function normalize(text: string): string {
 }
 
 /**
+ * LLMが返した文書パスを、registry のパス表記に揃える。
+ *
+ * LLMは「03_trial/T003_.../../../02_hospital/H003_.../pharmacy-sop.md」のように
+ * 相対指定を含むパスを返すことがある。指している文書は参照対象なのに、
+ * 文字列が一致しないせいで「参照外の文書」と誤判定すると警告が形骸化する。
+ */
+export function normalizeDocumentPath(path: string): string {
+  const unified = path.trim().replace(/\\/g, "/").replace(/^\.?\/+/, "");
+  return posix.normalize(unified).replace(/^\.\//, "");
+}
+
+/**
  * LLMが返した引用が、実際にその文書の本文に存在するかを照合する。
  *
  * docs/design.md 「4.5 引用の検証」:
@@ -49,7 +62,8 @@ export function verifyAnswer(
   };
 
   const citations: VerifiedCitation[] = answer.citations.map((citation) => {
-    const doc = byPath.get(citation.documentPath);
+    const documentPath = normalizeDocumentPath(citation.documentPath);
+    const doc = byPath.get(documentPath);
 
     // ⓪行動原則は「どう振る舞うべきか」を定めたものであり、規則ではない。
     // これを出典として示すと、アプリの提案が規則に見えてしまう。
@@ -57,10 +71,11 @@ export function verifyAnswer(
     const match =
       doc?.layer === 0
         ? "policy"
-        : classify(citation.quote, getNormalizedContent(citation.documentPath));
+        : classify(citation.quote, getNormalizedContent(documentPath));
 
     return {
       ...citation,
+      documentPath,
       match,
       verified: match === "exact",
       documentFound: doc !== undefined,
